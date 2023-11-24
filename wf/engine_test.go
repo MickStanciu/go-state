@@ -3,7 +3,7 @@ package wf_test
 import (
 	"testing"
 
-	"github.com/MickStanciu/go-state/internal/wf"
+	"github.com/MickStanciu/go-state/wf"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
