@@ -77,3 +77,13 @@ func (e *Engine) ProcessEvent(event Event) (*State, error) {
 	e.currentState = nextState
 	return nextState, nil
 }
+
+// JumpToState - will force a state change
+func (e *Engine) JumpToState(name StateName) error {
+	s, ok := e.states[name]
+	if !ok {
+		return fmt.Errorf("state %q is not defined", name)
+	}
+	e.currentState = s
+	return nil
+}

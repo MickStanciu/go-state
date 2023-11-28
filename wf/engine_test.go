@@ -101,6 +101,18 @@ func TestEngine_ProcessEvent_When_Error(t *testing.T) {
 	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the current state \"INITIAL_STATE\"", err.Error())
 }
 
+func TestEngine_JumpToState(t *testing.T) {
+	wfe := wf.NewEngine()
+
+	wfe.GetInitialState()
+	_, _ = wfe.RegisterState(S1)
+	_, _ = wfe.RegisterState(S2)
+
+	err := wfe.JumpToState(S2)
+	require.NoError(t, err)
+	assert.EqualValues(t, "STATE_2", wfe.GetCurrentState().GetName())
+}
+
 func TestFullFlow(t *testing.T) {
 	wfe := wf.NewEngine()
 
