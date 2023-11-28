@@ -113,6 +113,17 @@ func TestEngine_JumpToState(t *testing.T) {
 	assert.EqualValues(t, "STATE_2", wfe.GetCurrentState().GetName())
 }
 
+func TestEngine_RegisterFutureStateByName(t *testing.T) {
+	wfe := wf.NewEngine()
+	s1, err := wfe.RegisterStateAndEvent(wfe.GetInitialState().GetName(), E1, S1)
+	require.NoError(t, err)
+
+	nextState, err := wfe.ProcessEvent(E1)
+	require.NoError(t, err)
+	assert.EqualValues(t, S1, nextState.GetName())
+	assert.EqualValues(t, s1.GetName(), nextState.GetName())
+}
+
 func TestFullFlow(t *testing.T) {
 	wfe := wf.NewEngine()
 

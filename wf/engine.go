@@ -48,6 +48,26 @@ func (e *Engine) RegisterEvent(curState *State, event Event, nextState *State) e
 	return nil
 }
 
+// RegisterStateAndEvent - will add a new state and event
+func (e *Engine) RegisterStateAndEvent(fromStateName StateName, event Event, toStateName StateName) (*State, error) {
+	fromState, ok := e.states[fromStateName]
+	if !ok {
+		return nil, fmt.Errorf("state %q is not defined", fromStateName)
+	}
+
+	toState, err := e.RegisterState(toStateName)
+	if err != nil {
+		return nil, err
+	}
+
+	err = e.RegisterEvent(fromState, event, toState)
+	if err != nil {
+		return nil, err
+	}
+
+	return toState, nil
+}
+
 // GetState - returns a state by name or nil
 func (e *Engine) GetState(name StateName) *State {
 	s, ok := e.states[name]
