@@ -1,7 +1,5 @@
 package wf
 
-import "fmt"
-
 type StateName string
 
 const (
@@ -10,10 +8,10 @@ const (
 
 type State struct {
 	name    StateName
-	actions map[Event]*State
+	actions map[EventName]*State
 }
 
-func (s *State) attachEvent(event Event, nextState *State) bool {
+func (s *State) attachEvent(event EventName, nextState *State) bool {
 	_, ok := s.actions[event]
 	if !ok {
 		s.actions[event] = nextState
@@ -21,12 +19,12 @@ func (s *State) attachEvent(event Event, nextState *State) bool {
 	return !ok
 }
 
-func (s *State) execEvent(event Event) (*State, error) {
+func (s *State) execEvent(event EventName) (*State, bool) {
 	newState, ok := s.actions[event]
 	if ok {
-		return newState, nil
+		return newState, true
 	}
-	return nil, fmt.Errorf("event %q is not defined for the current state %q", event, s.name)
+	return nil, false
 }
 
 func (s *State) GetName() StateName {

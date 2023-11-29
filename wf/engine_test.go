@@ -10,11 +10,12 @@ import (
 )
 
 const (
-	S1 = "STATE_1"
-	S2 = "STATE_2"
-	S3 = "STATE_3"
-	S4 = "STATE_4"
-	S5 = "STATE_5"
+	START  = "START"
+	S1     = "STATE_1"
+	S2     = "STATE_2"
+	S3     = "STATE_3"
+	S4     = "STATE_4"
+	FINISH = "FINISH"
 
 	E1 = "EVENT_1"
 	E2 = "EVENT_2"
@@ -25,56 +26,81 @@ const (
 )
 
 func TestNewEngine(t *testing.T) {
-	wfe := wf.NewEngine()
+	wfe, err := wf.NewEngine(START)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
+	initial := wfe.GetInitialState()
+	assert.NotNil(t, initial)
+	assert.EqualValues(t, "START", initial.GetName())
+}
+
+func TestNewEngine_WithState_WhenNoErrors(t *testing.T) {
+	wfe, err := wf.NewEngine(
+		START,
+		wf.WithState(START, E1, S1),
+		wf.WithState(S1, E2, S2),
+		wf.WithState(S1, E4, S4),
+		wf.WithState(S2, E3, S3),
+		wf.WithState(S3, E3, S2),
+		wf.WithState(S3, E5, FINISH),
+		wf.WithState(S4, E5, FINISH),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
+	// test initial state
+	initial := wfe.GetInitialState()
+	assert.NotNil(t, initial)
+	assert.EqualValues(t, "START", initial.GetName())
+
+	// test jump to S1
+	nextState, err := wfe.ProcessEvent(E1)
+	require.NoError(t, err)
+	require.NotNil(t, nextState)
+	assert.EqualValues(t, wf.StateName("STATE_1"), nextState.GetName())
+
+	// test jump to S2
+	nextState, err = wfe.ProcessEvent(E2)
+	require.NoError(t, err)
+	require.NotNil(t, nextState)
+	assert.EqualValues(t, wf.StateName("STATE_2"), nextState.GetName())
+
+	// test illegal jump
+	nextState, err = wfe.ProcessEvent(E2)
+	require.Nil(t, nextState)
+	require.NotNil(t, err)
+	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the current state \"STATE_2\"", err.Error())
+}
+
+func TestEngine_RegisterState(t *testing.T) {
+	wfe, err := wf.NewEngine(START)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
+	s0 := wfe.GetInitialState()
+	s1, err := wfe.RegisterState(START, E1, S1)
+	require.NoError(t, err)
+	require.NotNil(t, s1)
+
+	s1_ := wfe.GetState(S1)
+	require.NotNil(t, s1_)
+
+	assert.EqualValues(t, s0, wfe.GetCurrentState())
+	assert.EqualValues(t, wf.StateName("STATE_1"), s1_.GetName())
+}
+
+func TestEngine_GetCurrentState(t *testing.T) {
+	wfe, err := wf.NewEngine(START)
+	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
 	s0 := wfe.GetInitialState()
 	assert.NotNil(t, s0)
-}
-
-func TestEngine_RegisterState(t *testing.T) {
-	wfe := wf.NewEngine()
-	s0 := wfe.GetInitialState()
-	s1, err := wfe.RegisterState(S1)
-	require.NoError(t, err)
-
-	require.NotNil(t, s1)
-	assert.EqualValues(t, s0, wfe.GetCurrentState())
-	assert.EqualValues(t, wf.StateName("STATE_1"), s1.GetName())
-}
-
-func TestEngine_RegisterState_When_Error(t *testing.T) {
-	wfe := wf.NewEngine()
-	s0 := wfe.GetInitialState()
-	_, err := wfe.RegisterState(s0.GetName())
-	require.Error(t, err)
-	assert.EqualValues(t, "state \"INITIAL_STATE\" already defined", err.Error())
-}
-
-func TestEngine_RegisterEvent_When_Error(t *testing.T) {
-	wfe := wf.NewEngine()
-
-	s0 := wfe.GetInitialState()
-	s1, _ := wfe.RegisterState(S1)
-	err := wfe.RegisterEvent(s0, E1, s1)
-	require.NoError(t, err)
-	err = wfe.RegisterEvent(s0, E1, s1)
-	assert.Error(t, err)
-	assert.EqualValues(t, "event \"EVENT_1\" already defined for the state \"INITIAL_STATE\"", err.Error())
-}
-
-func TestEngine_GetCurrentState(t *testing.T) {
-	wfe := wf.NewEngine()
-
-	s0 := wfe.GetInitialState()
-	assert.NotNil(t, s0)
 	assert.EqualValues(t, s0, wfe.GetCurrentState())
 
-	s1, _ := wfe.RegisterState(S1)
+	s1, _ := wfe.RegisterState(START, E1, S1)
 	assert.NotNil(t, s1)
-
-	err := wfe.RegisterEvent(s0, E1, s1)
-	assert.NoError(t, err)
 
 	nextState, err := wfe.ProcessEvent(E1)
 	require.NoError(t, err)
@@ -82,94 +108,39 @@ func TestEngine_GetCurrentState(t *testing.T) {
 }
 
 func TestEngine_GetState_When_Error(t *testing.T) {
-	wfe := wf.NewEngine()
+	wfe, err := wf.NewEngine(START)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
 	s1 := wfe.GetState("FAKE STATE")
 	assert.Nil(t, s1)
 }
 
 func TestEngine_ProcessEvent_When_Error(t *testing.T) {
-	wfe := wf.NewEngine()
-
-	s0 := wfe.GetInitialState()
-	s1, _ := wfe.RegisterState(S1)
-
-	err := wfe.RegisterEvent(s0, E1, s1)
+	wfe, err := wf.NewEngine(START)
 	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
+	s1, _ := wfe.RegisterState(START, E1, S1)
+	assert.NotNil(t, s1)
 
 	_, err = wfe.ProcessEvent(E2)
 	require.Error(t, err)
-	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the current state \"INITIAL_STATE\"", err.Error())
+	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the current state \"START\"", err.Error())
 }
 
 func TestEngine_JumpToState(t *testing.T) {
-	wfe := wf.NewEngine()
+	wfe, err := wf.NewEngine(START)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
 
 	wfe.GetInitialState()
-	_, _ = wfe.RegisterState(S1)
-	_, _ = wfe.RegisterState(S2)
+	_, err = wfe.RegisterState(START, E1, S1)
+	require.NoError(t, err)
+	_, err = wfe.RegisterState(S1, E2, S2)
+	require.NoError(t, err)
 
-	err := wfe.JumpToState(S2)
+	err = wfe.JumpToState(S2)
 	require.NoError(t, err)
 	assert.EqualValues(t, "STATE_2", wfe.GetCurrentState().GetName())
-}
-
-func TestEngine_RegisterFutureStateByName(t *testing.T) {
-	wfe := wf.NewEngine()
-	s1, err := wfe.RegisterStateAndEvent(wfe.GetInitialState().GetName(), E1, S1)
-	require.NoError(t, err)
-
-	nextState, err := wfe.ProcessEvent(E1)
-	require.NoError(t, err)
-	assert.EqualValues(t, S1, nextState.GetName())
-	assert.EqualValues(t, s1.GetName(), nextState.GetName())
-}
-
-func TestFullFlow(t *testing.T) {
-	wfe := wf.NewEngine()
-
-	s0 := wfe.GetInitialState()
-	s1, _ := wfe.RegisterState(S1)
-	s2, _ := wfe.RegisterState(S2)
-	s3, _ := wfe.RegisterState(S3)
-	s4, _ := wfe.RegisterState(S4)
-	s5, _ := wfe.RegisterState(S5)
-
-	err := wfe.RegisterEvent(s0, E1, s1)
-	assert.NoError(t, err)
-
-	err = wfe.RegisterEvent(s0, E2, s2)
-	assert.NoError(t, err)
-
-	err = wfe.RegisterEvent(s1, E3, s3)
-	assert.NoError(t, err)
-
-	err = wfe.RegisterEvent(s2, E3, s3)
-	assert.NoError(t, err)
-
-	err = wfe.RegisterEvent(s3, E4, s4)
-	assert.NoError(t, err)
-
-	err = wfe.RegisterEvent(s4, E5, s2)
-	assert.NoError(t, err)
-
-	err = wfe.RegisterEvent(s4, E6, s5)
-	assert.NoError(t, err)
-
-	nextState, err := wfe.ProcessEvent(E1)
-	require.NoError(t, err)
-	assert.EqualValues(t, s1, nextState)
-
-	nextState, err = wfe.ProcessEvent(E3)
-	require.NoError(t, err)
-	assert.EqualValues(t, s3, nextState)
-
-	nextState, err = wfe.ProcessEvent(E4)
-	require.NoError(t, err)
-	assert.EqualValues(t, s4, nextState)
-
-	nextState, err = wfe.ProcessEvent(E6)
-	require.NoError(t, err)
-	assert.EqualValues(t, s5, nextState)
-
-	assert.EqualValues(t, s5, wfe.GetCurrentState())
 }

@@ -1,3 +1,3 @@
 package wf
 
-type Event string
+type EventName string

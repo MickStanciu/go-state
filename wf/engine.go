@@ -3,69 +3,70 @@ package wf
 import "fmt"
 
 type Engine struct {
+	initialState *State
 	currentState *State
 	states       map[StateName]*State
 }
 
-// NewEngine - build a new wf engine with an initial state
-func NewEngine() *Engine {
-	s := map[StateName]*State{}
+type EngineOption func(state *Engine) error
 
-	state := &State{
-		name:    stateInitial,
-		actions: map[Event]*State{},
+// NewEngine - build a new wf engine with an initial state
+func NewEngine(initialStateName StateName, opts ...EngineOption) (*Engine, error) {
+	initialState := &State{
+		name:    initialStateName,
+		actions: map[EventName]*State{},
 	}
 
-	s[stateInitial] = state
-	return &Engine{
-		currentState: state,
-		states:       s,
+	e := &Engine{
+		initialState: initialState,
+		currentState: initialState,
+		states: map[StateName]*State{
+			initialStateName: initialState,
+		},
+	}
+
+	for _, opt := range opts {
+		err := opt(e)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	return e, nil
+}
+
+// WithState - will add a state during build
+func WithState(fromStateName StateName, eventName EventName, toStateName StateName) EngineOption {
+	return func(e *Engine) error {
+		_, err := e.RegisterState(fromStateName, eventName, toStateName)
+		return err
 	}
 }
 
 // RegisterState - will add a new state
 // will return the new state or error if the state was previously defined
-func (e *Engine) RegisterState(name StateName) (*State, error) {
-	_, ok := e.states[name]
-	if ok {
-		return nil, fmt.Errorf("state %q already defined", name)
+func (e *Engine) RegisterState(fromStateName StateName, eventName EventName, toStateName StateName) (*State, error) {
+	fromState := e.getOrCreateState(fromStateName)
+	toState := e.getOrCreateState(toStateName)
+	if eventOk := fromState.attachEvent(eventName, toState); !eventOk {
+		return nil, fmt.Errorf("event %q already defined for the state %q", eventName, fromState.name)
 	}
-
-	s := &State{
-		name:    name,
-		actions: map[Event]*State{},
-	}
-	e.states[name] = s
-
-	return s, nil
-}
-
-// RegisterEvent - will add an event to facilitate transition from current state to the next state
-func (e *Engine) RegisterEvent(curState *State, event Event, nextState *State) error {
-	if !curState.attachEvent(event, nextState) {
-		return fmt.Errorf("event %q already defined for the state %q", event, curState.name)
-	}
-	return nil
-}
-
-// RegisterStateAndEvent - will add a new state and event
-func (e *Engine) RegisterStateAndEvent(fromStateName StateName, event Event, toStateName StateName) (*State, error) {
-	fromState, ok := e.states[fromStateName]
-	if !ok {
-		return nil, fmt.Errorf("state %q is not defined", fromStateName)
-	}
-
-	toState, err := e.RegisterState(toStateName)
-	if err != nil {
-		return nil, err
-	}
-
-	err = e.RegisterEvent(fromState, event, toState)
-	if err != nil {
-		return nil, err
-	}
-
 	return toState, nil
+}
+
+// getOrCreateState - gets or creates a state.
+func (e *Engine) getOrCreateState(name StateName) *State {
+	state, ok := e.states[name]
+	if ok {
+		return state
+	}
+
+	newState := &State{
+		name:    name,
+		actions: map[EventName]*State{},
+	}
+	e.states[name] = newState
+	return newState
 }
 
 // GetState - returns a state by name or nil
@@ -79,7 +80,7 @@ func (e *Engine) GetState(name StateName) *State {
 
 // GetInitialState - returns the initial state
 func (e *Engine) GetInitialState() *State {
-	return e.GetState(stateInitial)
+	return e.initialState
 }
 
 // GetCurrentState - returns the current state
@@ -89,10 +90,10 @@ func (e *Engine) GetCurrentState() *State {
 
 // ProcessEvent - will run the event and return the next state
 // in case of the event was not defined, will return error
-func (e *Engine) ProcessEvent(event Event) (*State, error) {
-	nextState, err := e.currentState.execEvent(event)
-	if err != nil {
-		return nil, err
+func (e *Engine) ProcessEvent(event EventName) (*State, error) {
+	nextState, ok := e.currentState.execEvent(event)
+	if !ok {
+		return nil, fmt.Errorf("event %q is not defined for the current state %q", event, e.currentState.name)
 	}
 	e.currentState = nextState
 	return nextState, nil
