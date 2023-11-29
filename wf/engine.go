@@ -13,8 +13,8 @@ type EngineOption func(state *Engine) error
 // NewEngine - build a new wf engine with an initial state
 func NewEngine(initialStateName StateName, opts ...EngineOption) (*Engine, error) {
 	initialState := &State{
-		name:    initialStateName,
-		actions: map[EventName]*State{},
+		name:   initialStateName,
+		events: map[EventName]*State{},
 	}
 
 	e := &Engine{
@@ -62,8 +62,8 @@ func (e *Engine) getOrCreateState(name StateName) *State {
 	}
 
 	newState := &State{
-		name:    name,
-		actions: map[EventName]*State{},
+		name:   name,
+		events: map[EventName]*State{},
 	}
 	e.states[name] = newState
 	return newState

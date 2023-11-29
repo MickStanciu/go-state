@@ -2,25 +2,21 @@ package wf
 
 type StateName string
 
-const (
-	stateInitial StateName = "INITIAL_STATE"
-)
-
 type State struct {
-	name    StateName
-	actions map[EventName]*State
+	name   StateName
+	events map[EventName]*State
 }
 
 func (s *State) attachEvent(event EventName, nextState *State) bool {
-	_, ok := s.actions[event]
+	_, ok := s.events[event]
 	if !ok {
-		s.actions[event] = nextState
+		s.events[event] = nextState
 	}
 	return !ok
 }
 
 func (s *State) execEvent(event EventName) (*State, bool) {
-	newState, ok := s.actions[event]
+	newState, ok := s.events[event]
 	if ok {
 		return newState, true
 	}
