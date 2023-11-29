@@ -2,9 +2,12 @@ package wf
 
 type StateName string
 
+//type EventAction func() error
+
 type State struct {
 	name   StateName
 	events map[EventName]*State
+	//actions map[EventName] EventAction
 }
 
 func (s *State) attachEvent(event EventName, nextState *State) bool {
