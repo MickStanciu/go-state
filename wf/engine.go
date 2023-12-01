@@ -10,10 +10,12 @@ type Engine struct {
 
 type EngineOption func(state *Engine) error
 
-// NewEngine - build a new wf engine with an initial state
-func NewEngine(initialStateName StateName, opts ...EngineOption) (*Engine, error) {
+const defaultInitialState = "STATE_INITIAL"
+
+// NewEngine - build a new wf engine with a default initial state
+func NewEngine(opts ...EngineOption) (*Engine, error) {
 	initialState := &State{
-		name:   initialStateName,
+		name:   defaultInitialState,
 		events: map[EventName]*State{},
 	}
 
@@ -21,7 +23,7 @@ func NewEngine(initialStateName StateName, opts ...EngineOption) (*Engine, error
 		initialState: initialState,
 		currentState: initialState,
 		states: map[StateName]*State{
-			initialStateName: initialState,
+			defaultInitialState: initialState,
 		},
 	}
 
@@ -33,6 +35,17 @@ func NewEngine(initialStateName StateName, opts ...EngineOption) (*Engine, error
 	}
 
 	return e, nil
+}
+
+// WithInitialState - will build an initial state
+func WithInitialState(initialStateName StateName) EngineOption {
+	return func(e *Engine) error {
+		initialState := e.getOrCreateState(initialStateName)
+		initialState.events = map[EventName]*State{}
+		e.initialState = initialState
+		e.currentState = initialState
+		return nil
+	}
 }
 
 // WithState - will add a state during build

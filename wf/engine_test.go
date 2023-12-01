@@ -26,18 +26,18 @@ const (
 )
 
 func TestNewEngine(t *testing.T) {
-	wfe, err := wf.NewEngine(START)
+	wfe, err := wf.NewEngine()
 	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
 	initial := wfe.GetInitialState()
 	assert.NotNil(t, initial)
-	assert.EqualValues(t, "START", initial.GetName())
+	assert.EqualValues(t, "STATE_INITIAL", initial.GetName())
 }
 
 func TestNewEngine_WithState_WhenNoErrors(t *testing.T) {
 	wfe, err := wf.NewEngine(
-		START,
+		wf.WithInitialState("START"),
 		wf.WithState(START, E1, S1),
 		wf.WithState(S1, E2, S2),
 		wf.WithState(S1, E4, S4),
@@ -74,7 +74,7 @@ func TestNewEngine_WithState_WhenNoErrors(t *testing.T) {
 }
 
 func TestEngine_RegisterState(t *testing.T) {
-	wfe, err := wf.NewEngine(START)
+	wfe, err := wf.NewEngine(wf.WithInitialState("START"))
 	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
@@ -91,7 +91,7 @@ func TestEngine_RegisterState(t *testing.T) {
 }
 
 func TestEngine_GetCurrentState(t *testing.T) {
-	wfe, err := wf.NewEngine(START)
+	wfe, err := wf.NewEngine(wf.WithInitialState("START"))
 	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
@@ -108,7 +108,7 @@ func TestEngine_GetCurrentState(t *testing.T) {
 }
 
 func TestEngine_GetState_When_Error(t *testing.T) {
-	wfe, err := wf.NewEngine(START)
+	wfe, err := wf.NewEngine(wf.WithInitialState("START"))
 	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
@@ -117,7 +117,7 @@ func TestEngine_GetState_When_Error(t *testing.T) {
 }
 
 func TestEngine_ProcessEvent_When_Error(t *testing.T) {
-	wfe, err := wf.NewEngine(START)
+	wfe, err := wf.NewEngine(wf.WithInitialState("START"))
 	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
@@ -130,7 +130,7 @@ func TestEngine_ProcessEvent_When_Error(t *testing.T) {
 }
 
 func TestEngine_JumpToState(t *testing.T) {
-	wfe, err := wf.NewEngine(START)
+	wfe, err := wf.NewEngine(wf.WithInitialState("START"))
 	require.NoError(t, err)
 	require.NotNil(t, wfe)
 
