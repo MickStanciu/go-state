@@ -1,6 +1,7 @@
 package wf_test
 
 import (
+	"fmt"
 	"testing"
 
 	"github.com/MickStanciu/go-state/wf"
@@ -70,7 +71,7 @@ func TestNewEngine_WithState_WhenNoErrors(t *testing.T) {
 	nextState, err = wfe.ProcessEvent(E2)
 	require.Nil(t, nextState)
 	require.NotNil(t, err)
-	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the current state \"STATE_2\"", err.Error())
+	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the state \"STATE_2\"", err.Error())
 }
 
 func TestEngine_RegisterState(t *testing.T) {
@@ -126,7 +127,7 @@ func TestEngine_ProcessEvent_When_Error(t *testing.T) {
 
 	_, err = wfe.ProcessEvent(E2)
 	require.Error(t, err)
-	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the current state \"START\"", err.Error())
+	assert.EqualValues(t, "event \"EVENT_2\" is not defined for the state \"START\"", err.Error())
 }
 
 func TestEngine_JumpToState(t *testing.T) {
@@ -143,4 +144,42 @@ func TestEngine_JumpToState(t *testing.T) {
 	err = wfe.JumpToState(S2)
 	require.NoError(t, err)
 	assert.EqualValues(t, "STATE_2", wfe.GetCurrentState().GetName())
+}
+
+func TestNewEngine_WithStateAndAction(t *testing.T) {
+	val := 10
+	pVal := &val
+
+	doer := func() error {
+		*pVal++
+		return nil
+	}
+
+	wfe, err := wf.NewEngine(
+		wf.WithInitialState("START"),
+		wf.WithStateAndAction(START, E1, S1, doer),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
+	assert.EqualValues(t, 10, val)
+	_, err = wfe.ProcessEvent(E1)
+	assert.EqualValues(t, 11, val)
+}
+
+func TestNewEngine_WithStateAndAction_ShouldFailWhenActionFails(t *testing.T) {
+	doer := func() error {
+		return fmt.Errorf("some error")
+	}
+
+	wfe, err := wf.NewEngine(
+		wf.WithInitialState("START"),
+		wf.WithStateAndAction(START, E1, S1, doer),
+	)
+	require.NoError(t, err)
+	require.NotNil(t, wfe)
+
+	_, err = wfe.ProcessEvent(E1)
+	assert.EqualValues(t, "some error", err.Error())
+
 }

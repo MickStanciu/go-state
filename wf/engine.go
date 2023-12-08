@@ -15,8 +15,9 @@ const defaultInitialState = "STATE_INITIAL"
 // NewEngine - build a new wf engine with a default initial state
 func NewEngine(opts ...EngineOption) (*Engine, error) {
 	initialState := &State{
-		name:   defaultInitialState,
-		events: map[EventName]*State{},
+		name:    defaultInitialState,
+		events:  map[EventName]*State{},
+		actions: map[EventName]func() error{},
 	}
 
 	e := &Engine{
@@ -56,12 +57,33 @@ func WithState(fromStateName StateName, eventName EventName, toStateName StateNa
 	}
 }
 
+// WithStateAndAction - will add a state & action during build
+func WithStateAndAction(fromStateName StateName, eventName EventName, toStateName StateName, fn func() error) EngineOption {
+	return func(e *Engine) error {
+		if fn == nil {
+			return fmt.Errorf("action cannot be nil")
+		}
+
+		_, err := e.RegisterState(fromStateName, eventName, toStateName)
+		if err != nil {
+			return err
+		}
+
+		fromState := e.GetState(fromStateName)
+		if err := fromState.attachAction(eventName, fn); err != nil {
+			return fmt.Errorf("an action is already defined for the state %q and action %q", fromStateName, eventName)
+		}
+
+		return err
+	}
+}
+
 // RegisterState - will add a new state
 // will return the new state or error if the state was previously defined
 func (e *Engine) RegisterState(fromStateName StateName, eventName EventName, toStateName StateName) (*State, error) {
 	fromState := e.getOrCreateState(fromStateName)
 	toState := e.getOrCreateState(toStateName)
-	if eventOk := fromState.attachEvent(eventName, toState); !eventOk {
+	if err := fromState.attachEvent(eventName, toState); err != nil {
 		return nil, fmt.Errorf("event %q already defined for the state %q", eventName, fromState.name)
 	}
 	return toState, nil
@@ -75,8 +97,9 @@ func (e *Engine) getOrCreateState(name StateName) *State {
 	}
 
 	newState := &State{
-		name:   name,
-		events: map[EventName]*State{},
+		name:    name,
+		events:  map[EventName]*State{},
+		actions: map[EventName]func() error{},
 	}
 	e.states[name] = newState
 	return newState
@@ -104,9 +127,9 @@ func (e *Engine) GetCurrentState() *State {
 // ProcessEvent - will run the event and return the next state
 // in case of the event was not defined, will return error
 func (e *Engine) ProcessEvent(event EventName) (*State, error) {
-	nextState, ok := e.currentState.execEvent(event)
-	if !ok {
-		return nil, fmt.Errorf("event %q is not defined for the current state %q", event, e.currentState.name)
+	nextState, err := e.currentState.execEvent(event)
+	if err != nil {
+		return nil, err
 	}
 	e.currentState = nextState
 	return nextState, nil
