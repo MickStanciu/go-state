@@ -78,6 +78,17 @@ func WithStateAndAction(fromStateName StateName, eventName EventName, toStateNam
 	}
 }
 
+// WithExistingEngine - will replace the states / events / actions from another engine
+func WithExistingEngine(ne *Engine) EngineOption {
+	return func(e *Engine) error {
+		//TODO? shall to a value copy instead of pointer copy ?
+		e.states = ne.states
+		e.currentState = ne.currentState
+		e.initialState = ne.initialState
+		return nil
+	}
+}
+
 // RegisterState - will add a new state
 // will return the new state or error if the state was previously defined
 func (e *Engine) RegisterState(fromStateName StateName, eventName EventName, toStateName StateName) (*State, error) {
