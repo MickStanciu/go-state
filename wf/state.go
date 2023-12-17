@@ -12,6 +12,15 @@ type State struct {
 	actions map[EventName]func(StateName) error
 }
 
+// NewState - builds a new State
+func NewState(name StateName) *State {
+	return &State{
+		name:    name,
+		events:  map[EventName]*State{},
+		actions: map[EventName]func(StateName) error{},
+	}
+}
+
 func (s *State) attachEvent(event EventName, nextState *State) error {
 	_, ok := s.events[event]
 	if !ok {

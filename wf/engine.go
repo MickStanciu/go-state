@@ -14,11 +14,7 @@ const defaultInitialState = "STATE_INITIAL"
 
 // NewEngine - build a new wf engine with a default initial state
 func NewEngine(opts ...EngineOption) (*Engine, error) {
-	initialState := &State{
-		name:    defaultInitialState,
-		events:  map[EventName]*State{},
-		actions: map[EventName]func(StateName) error{},
-	}
+	initialState := NewState(defaultInitialState)
 
 	e := &Engine{
 		initialState: initialState,
@@ -75,17 +71,6 @@ func WithStateAndAction(fromStateName StateName, eventName EventName, toStateNam
 		}
 
 		return err
-	}
-}
-
-// WithExistingEngine - will replace the states / events / actions from another engine
-func WithExistingEngine(ne *Engine) EngineOption {
-	return func(e *Engine) error {
-		//TODO? shall to a value copy instead of pointer copy ?
-		e.states = ne.states
-		e.currentState = ne.currentState
-		e.initialState = ne.initialState
-		return nil
 	}
 }
 
