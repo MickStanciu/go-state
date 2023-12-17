@@ -17,7 +17,7 @@ func NewEngine(opts ...EngineOption) (*Engine, error) {
 	initialState := &State{
 		name:    defaultInitialState,
 		events:  map[EventName]*State{},
-		actions: map[EventName]func() error{},
+		actions: map[EventName]func(StateName) error{},
 	}
 
 	e := &Engine{
@@ -58,7 +58,7 @@ func WithState(fromStateName StateName, eventName EventName, toStateName StateNa
 }
 
 // WithStateAndAction - will add a state & action during build
-func WithStateAndAction(fromStateName StateName, eventName EventName, toStateName StateName, fn func() error) EngineOption {
+func WithStateAndAction(fromStateName StateName, eventName EventName, toStateName StateName, fn func(StateName) error) EngineOption {
 	return func(e *Engine) error {
 		if fn == nil {
 			return fmt.Errorf("action cannot be nil")
@@ -99,7 +99,7 @@ func (e *Engine) getOrCreateState(name StateName) *State {
 	newState := &State{
 		name:    name,
 		events:  map[EventName]*State{},
-		actions: map[EventName]func() error{},
+		actions: map[EventName]func(StateName) error{},
 	}
 	e.states[name] = newState
 	return newState
@@ -142,5 +142,13 @@ func (e *Engine) JumpToState(name StateName) error {
 		return fmt.Errorf("state %q is not defined", name)
 	}
 	e.currentState = s
+	return nil
+}
+
+// AttachAction - will attach an action to existing state/event
+func (e *Engine) AttachAction(eventName EventName, fn func(nextStateName StateName) error) error {
+	if err := e.currentState.attachAction(eventName, fn); err != nil {
+		return fmt.Errorf("an action is already defined for the state %q and action %q", e.currentState.GetName(), eventName)
+	}
 	return nil
 }

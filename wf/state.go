@@ -9,7 +9,7 @@ type StateName string
 type State struct {
 	name    StateName
 	events  map[EventName]*State
-	actions map[EventName]func() error
+	actions map[EventName]func(StateName) error
 }
 
 func (s *State) attachEvent(event EventName, nextState *State) error {
@@ -21,7 +21,7 @@ func (s *State) attachEvent(event EventName, nextState *State) error {
 	return fmt.Errorf("event %q is already defined for the state %q", event, s.name)
 }
 
-func (s *State) attachAction(event EventName, fn func() error) error {
+func (s *State) attachAction(event EventName, fn func(nextStateName StateName) error) error {
 	_, ok := s.actions[event]
 	if ok {
 		return fmt.Errorf("action is already defined for the event %q and the state %q", event, s.name)
@@ -43,7 +43,7 @@ func (s *State) execEvent(event EventName) (*State, error) {
 	}
 
 	// exec action
-	if err := actionFn(); err != nil {
+	if err := actionFn(newState.name); err != nil {
 		return nil, err
 	}
 

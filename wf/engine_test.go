@@ -150,7 +150,7 @@ func TestNewEngine_WithStateAndAction(t *testing.T) {
 	val := 10
 	pVal := &val
 
-	doer := func() error {
+	doer := func(wf.StateName) error {
 		*pVal++
 		return nil
 	}
@@ -168,7 +168,7 @@ func TestNewEngine_WithStateAndAction(t *testing.T) {
 }
 
 func TestNewEngine_WithStateAndAction_ShouldFailWhenActionFails(t *testing.T) {
-	doer := func() error {
+	doer := func(wf.StateName) error {
 		return fmt.Errorf("some error")
 	}
 
